@@ -337,7 +337,7 @@ export default function DashboardWithAPIs() {
           type={followersType}
           data={followersType === 'followers' ? followers : following}
           onClose={() => setShowFollowers(false)}
-          onUnfollow={followersType === 'following' ? handleUnfollow : undefined}
+          // onUnfollow={followersType === 'following' ? handleUnfollow : undefined}
         />
       )}
     </div>

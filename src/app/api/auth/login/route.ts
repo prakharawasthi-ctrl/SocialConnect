@@ -14,12 +14,7 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-if (!process.env.JWT_SECRET) {
-  throw new Error("JWT_SECRET is missing in env");
-}
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
+const JWT_SECRET = process.env.JWT_SECRET!;
 const JWT_EXPIRES_IN = "7d";
 const REFRESH_TOKEN_EXPIRES_IN = "30d";
 
@@ -28,7 +23,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { identifier, password } = loginSchema.parse(body);
 
-    // Find user by email or username
+    // Fetch user
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("*")
@@ -36,23 +31,16 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // Verify password
+    // Validate password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
-
     if (!isValidPassword) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // Update last login
+    // Update last login time
     await supabase
       .from("users")
       .update({ last_login: new Date().toISOString() })
@@ -65,18 +53,38 @@ export async function POST(request: NextRequest) {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
-    const refreshToken = jwt.sign({ userId: user.id }, JWT_SECRET, {
-      expiresIn: REFRESH_TOKEN_EXPIRES_IN,
-    });
+    const refreshToken = jwt.sign(
+      { userId: user.id },
+      JWT_SECRET,
+      { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
+    );
 
-    // Remove password from response
     const { password_hash, ...userWithoutPassword } = user;
 
-    return NextResponse.json({
-      accessToken,
-      refreshToken,
+    // *** FIX: Set HTTP-only cookie ***
+    const response = NextResponse.json({
       user: userWithoutPassword,
+      message: "Login successful",
     });
+
+    response.cookies.set("token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+
+    response.cookies.set("refresh_token", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    });
+
+    return response;
+
   } catch (error: any) {
     console.error("Login error:", error);
 

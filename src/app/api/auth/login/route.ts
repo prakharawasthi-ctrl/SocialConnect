@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { z } from "zod";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,13 +10,18 @@ const supabase = createClient(
 );
 
 const loginSchema = z.object({
-  identifier: z.string().min(1, 'Email or username is required'),
-  password: z.string().min(1, 'Password is required'),
+  identifier: z.string().min(1, "Email or username is required"),
+  password: z.string().min(1, "Password is required"),
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
-const JWT_EXPIRES_IN = '7d';
-const REFRESH_TOKEN_EXPIRES_IN = '30d';
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET is missing in env");
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+const JWT_EXPIRES_IN = "7d";
+const REFRESH_TOKEN_EXPIRES_IN = "30d";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,33 +30,33 @@ export async function POST(request: NextRequest) {
 
     // Find user by email or username
     const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('*')
+      .from("users")
+      .select("*")
       .or(`email.eq.${identifier},username.eq.${identifier}`)
       .single();
 
     if (userError || !user) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
+        { error: "Invalid credentials" },
         { status: 401 }
       );
     }
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    
+
     if (!isValidPassword) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
+        { error: "Invalid credentials" },
         { status: 401 }
       );
     }
 
     // Update last login
     await supabase
-      .from('users')
+      .from("users")
       .update({ last_login: new Date().toISOString() })
-      .eq('id', user.id);
+      .eq("id", user.id);
 
     // Generate tokens
     const accessToken = jwt.sign(
@@ -60,11 +65,9 @@ export async function POST(request: NextRequest) {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
-    const refreshToken = jwt.sign(
-      { userId: user.id },
-      JWT_SECRET,
-      { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
-    );
+    const refreshToken = jwt.sign({ userId: user.id }, JWT_SECRET, {
+      expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+    });
 
     // Remove password from response
     const { password_hash, ...userWithoutPassword } = user;
@@ -75,8 +78,8 @@ export async function POST(request: NextRequest) {
       user: userWithoutPassword,
     });
   } catch (error: any) {
-    console.error('Login error:', error);
-    
+    console.error("Login error:", error);
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0].message },
@@ -85,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || 'Login failed' },
+      { error: error.message || "Login failed" },
       { status: 500 }
     );
   }

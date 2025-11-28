@@ -1,14 +1,47 @@
 'use client'
 
-import React from 'react';
+import React, { useState } from 'react';
 import { User } from '@/types';
 
 interface SuggestedUsersProps {
   users: User[];
-  onFollow: (userId: string) => void;
+  onFollow: (userId: string, followersCount: number) => void; // include followers count
 }
 
 export default function SuggestedUsers({ users, onFollow }: SuggestedUsersProps) {
+  const [loadingIds, setLoadingIds] = useState<string[]>([]);
+
+  const handleFollowClick = async (userId: string) => {
+    try {
+      setLoadingIds(prev => [...prev, userId]);
+
+      const token = localStorage.getItem("accessToken");
+      if (!token) return;
+
+      const res = await fetch("/api/followers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ followingId: userId })
+      });
+
+      if (!res.ok) throw new Error("Failed to follow user");
+
+      const data = await res.json();
+      const followersCount = data.followers_count || 0;
+
+      // Pass userId and followers count back to parent
+      onFollow(userId, followersCount);
+
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingIds(prev => prev.filter(id => id !== userId));
+    }
+  };
+
   return (
     <aside className="lg:col-span-3">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sticky top-24">
@@ -18,7 +51,7 @@ export default function SuggestedUsers({ users, onFollow }: SuggestedUsersProps)
             <div key={user.id} className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <img
-                  src={user.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.username}
+                  src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
                   alt={user.username}
                   className="w-10 h-10 rounded-full"
                 />
@@ -27,11 +60,12 @@ export default function SuggestedUsers({ users, onFollow }: SuggestedUsersProps)
                   <p className="text-xs text-gray-500">@{user.username}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => onFollow(user.id)}
-                className="px-3 py-1.5 text-sm font-medium rounded-full transition bg-blue-600 text-white hover:bg-blue-700"
+              <button
+                onClick={() => handleFollowClick(user.id)}
+                disabled={loadingIds.includes(user.id)}
+                className="px-3 py-1.5 text-sm font-medium rounded-full transition bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Follow
+                {loadingIds.includes(user.id) ? "Following..." : "Follow"}
               </button>
             </div>
           ))}

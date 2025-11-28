@@ -6,7 +6,18 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 export function withAuth(handler: any) {
   return async (req: NextRequest) => {
     try {
-      const token = req.cookies.get("token")?.value;
+      // 1️⃣ First try Authorization: Bearer
+      const authHeader = req.headers.get("authorization");
+      let token = null;
+
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.replace("Bearer ", "");
+      }
+
+      // 2️⃣ Fallback to cookie
+      if (!token) {
+        token = req.cookies.get("token")?.value || null;
+      }
 
       if (!token) {
         return NextResponse.json(
@@ -15,13 +26,17 @@ export function withAuth(handler: any) {
         );
       }
 
+      // 3️⃣ Verify token
       const decoded = jwt.verify(token, JWT_SECRET);
 
-      // Attach user to request
+      // 4️⃣ Attach user to request
       (req as any).user = decoded;
 
       return handler(req);
+
     } catch (error) {
+      console.error("Auth error:", error);
+
       return NextResponse.json(
         { error: "Invalid or expired token" },
         { status: 401 }

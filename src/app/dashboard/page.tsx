@@ -19,7 +19,7 @@ import FollowersModal from '@/components/profile/FollowersModal';
 export default function DashboardWithAPIs() {
   const { user: authUser, loading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  
+
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [postContent, setPostContent] = useState('');
@@ -58,7 +58,7 @@ export default function DashboardWithAPIs() {
 
   const fetchUserProfile = async () => {
     if (!authUser) return;
-    
+
     setCurrentUser({
       ...authUser,
       followers_count: 0,
@@ -203,14 +203,31 @@ export default function DashboardWithAPIs() {
         body: JSON.stringify({ followingId: userId })
       });
 
-      if (response.ok) {
-        setSuggestedUsers(suggestedUsers.filter(u => u.id !== userId));
-        fetchFollowers();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to follow user');
       }
+
+      const data = await response.json();
+
+      // Remove user from suggested users
+      setSuggestedUsers(prev => prev.filter(u => u.id !== userId));
+
+      // Update current user's following count
+      setCurrentUser(prev => prev
+        ? { ...prev, following_count: data.following_count || (prev.following_count + 1) }
+        : prev
+      );
+
+      // Optionally: if you have a followers list or UI showing the followed user's followers,
+      // you can update that count here using data.followers_count
+      // e.g., update in a users array if stored
+
     } catch (error) {
       console.error('Error following user:', error);
     }
   };
+
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

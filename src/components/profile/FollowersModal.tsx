@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Users } from 'lucide-react';
 import { Follower } from '@/types';
 
@@ -11,15 +11,54 @@ interface FollowersModalProps {
   onUnfollow?: (userId: string) => void;
 }
 
-export default function FollowersModal({ 
-  type, 
-  data, 
-  onClose, 
-  onUnfollow 
-}: FollowersModalProps) {
+export default function FollowersModal({ type, data, onClose }: FollowersModalProps) {
+  const [list, setList] = useState(data);
+
+  const followUser = async (userId: string) => {
+    try {
+      const res = await fetch("/api/followers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ followingId: userId }),
+      });
+
+      if (!res.ok) return;
+
+      setList(prev =>
+        prev.map(item =>
+          item.user.id === userId ? { ...item, isFollowing: true } : item
+        )
+      );
+    } catch (err) {
+      console.error("Follow error:", err);
+    }
+  };
+
+  const unfollowUser = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/followers?followingId=${userId}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+
+      if (!res.ok) return;
+
+      setList(prev =>
+        prev.map(item =>
+          item.user.id === userId ? { ...item, isFollowing: false } : item
+        )
+      );
+    } catch (err) {
+      console.error("Unfollow error:", err);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-gray-300 rounded-xl max-w-md w-full max-h-[80vh] overflow-hidden shadow-lg border border-gray-400">
+
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h3 className="font-bold text-lg capitalize">{type}</h3>
           <button
@@ -30,40 +69,94 @@ export default function FollowersModal({
           </button>
         </div>
 
+        {/* List */}
         <div className="overflow-y-auto max-h-[calc(80vh-80px)] p-4">
-          {data.length === 0 ? (
+          {list.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>No {type} yet</p>
+              <p>No {type} found</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {data.map(item => (
+              {list.map(item => (
                 <div key={item.id} className="flex items-center justify-between">
+
+                  {/* User Info */}
                   <div className="flex items-center gap-3">
                     <img
-                      src={item.user.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + item.user.username}
+                      src={
+                        item.user.avatar_url ||
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user.username}`
+                      }
                       alt={item.user.username}
                       className="w-12 h-12 rounded-full"
                     />
+
                     <div>
-                      <h4 className="font-semibold text-sm">{item.user.first_name} {item.user.last_name}</h4>
+                      <h4 className="font-semibold text-sm">
+                        {item.user.first_name} {item.user.last_name}
+                      </h4>
                       <p className="text-xs text-gray-500">@{item.user.username}</p>
                     </div>
                   </div>
-                  {type === 'following' && onUnfollow && (
-                    <button
-                      onClick={() => onUnfollow(item.user.id)}
-                      className="px-3 py-1.5 text-sm font-medium rounded-full transition bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    >
-                      Unfollow
-                    </button>
-                  )}
+
+                  {/* Follow / Unfollow Button ALWAYS visible */}
+                  {/* <div>
+                    {!item.isFollowing ? (
+                      <button
+                        onClick={() => followUser(item.user.id)}
+                        className="px-3 py-1.5 text-sm font-medium rounded-full bg-blue-500 text-white hover:bg-blue-600"
+                      >
+                        Follow
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => unfollowUser(item.user.id)}
+                        className="px-3 py-1.5 text-sm font-medium rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      >
+                        Unfollow
+                      </button>
+                    )}
+                  </div> */}
+                  {/* Follow / Unfollow Logic */}
+                  <div>
+                    {type === "following" ? (
+                      // ALWAYS show unfollow when viewing following list
+                      <button
+                        onClick={() => unfollowUser(item.user.id)}
+                        className="px-3 py-1.5 text-sm font-medium rounded-full  bg-red-500 text-white hover:bg-red-600"
+                      >
+                        Unfollow
+                      </button>
+                    ) : (
+                      // Followers list: show Follow back or Unfollow
+                      <>
+                        {!item.isFollowing ? (
+                          <button
+                            onClick={() => followUser(item.user.id)}
+                            className="px-3 py-1.5 text-sm font-medium rounded-full bg-blue-500 text-white hover:bg-blue-600"
+                          >
+                            Follow Back
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => unfollowUser(item.user.id)}
+                            className="px-3 py-1.5 text-sm font-medium rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          >
+                            Unfollow
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+
                 </div>
               ))}
             </div>
           )}
         </div>
+
       </div>
     </div>
   );

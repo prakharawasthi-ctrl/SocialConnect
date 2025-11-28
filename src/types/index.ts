@@ -190,6 +190,7 @@ export interface Follower {
   id: string;
   created_at: string;
   user: User;
+  isFollowing: boolean;
 }
 
 export interface CurrentUser extends User {

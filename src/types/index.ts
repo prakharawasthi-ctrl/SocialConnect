@@ -3,28 +3,28 @@
 // ============================================
 
 export interface User {
-  id: string
-  email: string
-  username: string
-  first_name: string
-  last_name: string
-  bio?: string
-  avatar_url?: string
-  website?: string
-  location?: string
-  role: 'user' | 'admin'
-  is_active: boolean
-  email_verified: boolean
-  privacy_setting: 'public' | 'private' | 'followers_only'
-  last_login?: string
-  created_at: string
-  updated_at: string
-  
+  id: string;
+  email: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  bio?: string;
+  avatar_url?: string;
+  website?: string;
+  location?: string;
+  role: "user" | "admin";
+  is_active: boolean;
+  email_verified: boolean;
+  privacy_setting: "public" | "private" | "followers_only";
+  last_login?: string;
+  created_at: string;
+  updated_at: string;
+
   // Computed fields
-  followers_count?: number
-  following_count?: number
-  posts_count?: number
-  is_following?: boolean
+  followers_count?: number;
+  following_count?: number;
+  posts_count?: number;
+  is_following?: boolean;
 }
 
 // ============================================
@@ -32,60 +32,48 @@ export interface User {
 // ============================================
 
 export interface AuthResponse {
-  accessToken: string
-  refreshToken: string
-  user: User
-  error: string
+  accessToken: string;
+  refreshToken: string;
+  user: User;
+  error: string;
 }
 
 export interface RegisterData {
-  email: string
-  username: string
-  password: string
-  first_name: string
-  last_name: string
+  email: string;
+  username: string;
+  password: string;
+  first_name: string;
+  last_name: string;
 }
 
 export interface LoginData {
-  identifier: string
-  password: string
+  identifier: string;
+  password: string;
 }
 
 // ============================================
 // POST TYPES
 // ============================================
 
-export interface Post {
-  id: string
-  user_id: string
-  content: string
-  image_url?: string
-  created_at: string
-  updated_at: string
-  user?: User
-  likes_count?: number
-  comments_count?: number
-  is_liked_by_current_user?: boolean
-}
 
 export interface CreatePostData {
-  content: string
-  image_url?: string
+  content: string;
+  image_url?: string;
 }
 
 export interface UpdatePostData {
-  content?: string
-  image_url?: string
+  content?: string;
+  image_url?: string;
 }
 
 export interface FeedPost extends Post {
-  user: User
+  user: User;
 }
 
 export interface FeedResponse {
-  posts: FeedPost[]
-  has_more: boolean
-  next_cursor?: string
+  posts: FeedPost[];
+  has_more: boolean;
+  next_cursor?: string;
 }
 
 // ============================================
@@ -93,17 +81,17 @@ export interface FeedResponse {
 // ============================================
 
 export interface Follow {
-  id: string
-  follower_id: string
-  following_id: string
-  created_at: string
+  id: string;
+  follower_id: string;
+  following_id: string;
+  created_at: string;
 }
 
 export interface FollowStats {
-  followers_count: number
-  following_count: number
-  is_following?: boolean
-  is_followed_by?: boolean
+  followers_count: number;
+  following_count: number;
+  is_following?: boolean;
+  is_followed_by?: boolean;
 }
 
 // ============================================
@@ -111,10 +99,10 @@ export interface FollowStats {
 // ============================================
 
 export interface Like {
-  id: string
-  user_id: string
-  post_id: string
-  created_at: string
+  id: string;
+  user_id: string;
+  post_id: string;
+  created_at: string;
 }
 
 // ============================================
@@ -122,24 +110,24 @@ export interface Like {
 // ============================================
 
 export interface ProfileData {
-  user: User
+  user: User;
   stats: {
-    posts_count: number
-    followers_count: number
-    following_count: number
-  }
-  is_following?: boolean
-  is_own_profile: boolean
+    posts_count: number;
+    followers_count: number;
+    following_count: number;
+  };
+  is_following?: boolean;
+  is_own_profile: boolean;
 }
 
 export interface UpdateProfileData {
-  first_name?: string
-  last_name?: string
-  bio?: string
-  avatar_url?: string
-  website?: string
-  location?: string
-  privacy_setting?: 'public' | 'private' | 'followers_only'
+  first_name?: string;
+  last_name?: string;
+  bio?: string;
+  avatar_url?: string;
+  website?: string;
+  location?: string;
+  privacy_setting?: "public" | "private" | "followers_only";
 }
 
 // ============================================
@@ -147,9 +135,9 @@ export interface UpdateProfileData {
 // ============================================
 
 export interface UploadResponse {
-  url: string
-  path: string
-  error?: string
+  url: string;
+  path: string;
+  error?: string;
 }
 
 // ============================================
@@ -157,15 +145,15 @@ export interface UploadResponse {
 // ============================================
 
 export interface ApiResponse<T = any> {
-  data?: T
-  error?: string
-  message?: string
+  data?: T;
+  error?: string;
+  message?: string;
 }
 
 export interface PaginationParams {
-  limit?: number
-  offset?: number
-  cursor?: string
+  limit?: number;
+  offset?: number;
+  cursor?: string;
 }
 
 // ============================================
@@ -173,16 +161,71 @@ export interface PaginationParams {
 // ============================================
 
 export interface Comment {
-  id: string
-  post_id: string
-  user_id: string
-  content: string
-  created_at: string
-  updated_at: string
-  user?: User
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  user?: User;
 }
 
 export interface CreateCommentData {
-  post_id: string
-  content: string
+  post_id: string;
+  content: string;
+}
+
+// src/types/index.ts
+
+export interface User {
+  id: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  avatar_url?: string;
+  bio?: string;
+}
+
+export interface Follower {
+  id: string;
+  created_at: string;
+  user: User;
+}
+
+export interface CurrentUser extends User {
+  followers_count: number;
+  following_count: number;
+  posts_count: number;
+}
+export interface User {
+  id: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  avatar_url?: string;
+  bio?: string;
+}
+
+export interface Post {
+  id: string;
+  content: string;
+  image_url?: string;
+  created_at: string;
+  user: User;
+  likes_count: number;
+  comments_count: number;
+  is_liked_by_current_user: boolean;
+  is_following: boolean;
+}
+
+export interface Follower {
+  id: string;
+  created_at: string;
+  user: User;
+}
+
+export interface CurrentUser extends User {
+  followers_count: number;
+  following_count: number;
+  posts_count: number;
 }

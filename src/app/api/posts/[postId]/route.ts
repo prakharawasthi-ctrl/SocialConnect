@@ -1,115 +1,3 @@
-// // import { NextRequest, NextResponse } from "next/server";
-// // import { createClient } from "@supabase/supabase-js";
-// // import { withAuth } from "@/lib/auth/middleware";
-
-// // const supabase = createClient(
-// //   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-// //   process.env.SUPABASE_SERVICE_ROLE_KEY!
-// // );
-
-// // export const DELETE = withAuth(
-// //   async (
-// //     req: NextRequest & { user?: any }, 
-// //     { params }: { params: { postId: string } }
-// //   ) => {
-// //     const postId = params.postId;
-// //     const user = req.user;
-
-// //     const { data: post } = await supabase
-// //       .from("posts")
-// //       .select("author_id")
-// //       .eq("id", postId)
-// //       .single();
-
-// //     if (!post) {
-// //       return NextResponse.json({ error: "Post not found" }, { status: 404 });
-// //     }
-
-// //     if (post.author_id !== user.userId) {
-// //       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-// //     }
-
-// //     await supabase.from("posts").delete().eq("id", postId);
-
-// //     return NextResponse.json({ message: "Post deleted successfully" });
-// //   }
-// // );
-
-
-// import { NextRequest, NextResponse } from "next/server";
-// import { createClient } from "@supabase/supabase-js";
-// import { withAuth } from "@/lib/auth/middleware";
-
-// const supabase = createClient(
-//   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-//   process.env.SUPABASE_SERVICE_ROLE_KEY!
-// );
-
-// export const DELETE = withAuth(
-//   async (
-//     req: NextRequest & { user?: any },
-//     { params }: { params: { postId: string } }
-//   ) => {
-//     try {
-//       const postId = params.postId;
-//       const userId = req.user.userId; // ✅ FIXED
-
-//       if (!postId) {
-//         return NextResponse.json(
-//           { error: "Post ID is required" },
-//           { status: 400 }
-//         );
-//       }
-
-//       // Fetch post
-//       const { data: post, error: postError } = await supabase
-//         .from("posts")
-//         .select("author_id")
-//         .eq("id", postId)
-//         .single();
-
-//       if (postError || !post) {
-//         return NextResponse.json(
-//           { error: "Post not found" },
-//           { status: 404 }
-//         );
-//       }
-
-//       // Ensure correct user
-//       if (post.author_id !== userId) {
-//         return NextResponse.json(
-//           { error: "Unauthorized" },
-//           { status: 403 }
-//         );
-//       }
-
-//       // Delete the post
-//       const { error: deleteError } = await supabase
-//         .from("posts")
-//         .delete()
-//         .eq("id", postId);
-
-//       if (deleteError) {
-//         console.error("Delete error:", deleteError);
-//         return NextResponse.json(
-//           { error: "Failed to delete post" },
-//           { status: 500 }
-//         );
-//       }
-
-//       return NextResponse.json({
-//         message: "Post deleted successfully",
-//       });
-//     } catch (err) {
-//       console.error("Delete post error:", err);
-//       return NextResponse.json(
-//         { error: "Internal server error" },
-//         { status: 500 }
-//       );
-//     }
-//   }
-// );
-// src/app/api/posts/[postId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { withAuth } from "@/lib/auth/middleware";
@@ -118,6 +6,90 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+// ============================================
+// UPDATE - Update a Post
+// ============================================ 
+export const PUT = withAuth(async (
+  req: NextRequest & { user?: any },
+  { params }: { params: Promise<{ postId: string }> }
+) => {
+  console.log("✏️ PUT /api/posts/[postId] - Request received");
+  
+  try {
+    const userId = req.user?.userId;
+    const { postId } = await params;
+    const { content } = await req.json();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized - No user ID" },
+        { status: 401 }
+      );
+    }
+
+    if (!content || !content.trim()) {
+      return NextResponse.json(
+        { error: "Content is required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify post ownership
+    const { data: post, error: fetchError } = await supabase
+      .from("posts")
+      .select("author_id")
+      .eq("id", postId)
+      .single();
+
+    if (fetchError || !post) {
+      return NextResponse.json(
+        { error: "Post not found" },
+        { status: 404 }
+      );
+    }
+
+    if (post.author_id !== userId) {
+      return NextResponse.json(
+        { error: "You can only edit your own posts" },
+        { status: 403 }
+      );
+    }
+
+    // Update the post
+    const { data: updatedPost, error: updateError } = await supabase
+      .from("posts")
+      .update({ 
+        content: content.trim(),
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", postId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("❌ Failed to update post:", updateError);
+      return NextResponse.json(
+        { error: "Failed to update post" },
+        { status: 500 }
+      );
+    }
+
+    console.log("✅ Post updated successfully");
+
+    return NextResponse.json({
+      success: true,
+      message: "Post updated successfully",
+      data: updatedPost
+    });
+
+  } catch (error) {
+    console.error("🔥 SERVER ERROR in PUT /api/posts/[postId]:", error);
+    return NextResponse.json(
+      { error: "Server failed to update post" },
+      { status: 500 }
+    );
+  }
+});
 
 // ============================================
 // DELETE - Delete a Post

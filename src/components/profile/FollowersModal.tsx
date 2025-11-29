@@ -8,30 +8,22 @@ interface FollowersModalProps {
   type: "followers" | "following";
   data: Follower[];
   onClose: () => void;
+  onFollowChange?: () => void; // 🔥 NEW
 }
 
 export default function FollowersModal({
   type,
   data,
   onClose,
+  onFollowChange,
 }: FollowersModalProps) {
   const [list, setList] = useState(data);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   // -----------------------------
-  // 🔥 GET AUTH HEADER
+  // 🔥 NO TOKEN NEEDED — Cookies handle auth
   // -----------------------------
-  const getAuthHeader = () => {
-    const token = localStorage.getItem("accessToken");
-    return {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    };
-  };
 
-  // -----------------------------
-  // 🔥 FOLLOW USER
-  // -----------------------------
   const followUser = async (userId: string) => {
     setLoadingId(userId);
 
@@ -45,19 +37,15 @@ export default function FollowersModal({
     try {
       const res = await fetch("/api/followers", {
         method: "POST",
-        headers: getAuthHeader(),
+        credentials: "include", // IMPORTANT
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ followingId: userId }),
       });
 
       if (!res.ok) {
         console.error("Follow failed", await res.json());
-
-        // REVERT on failure
-        setList((prev) =>
-          prev.map((item) =>
-            item.user.id === userId ? { ...item, isFollowing: false } : item
-          )
-        );
+      } else {
+        onFollowChange?.(); // 🔥 Notify parent
       }
     } catch (err) {
       console.error("Follow error:", err);
@@ -66,56 +54,47 @@ export default function FollowersModal({
     setLoadingId(null);
   };
 
-  // -----------------------------
-  // 🔥 UNFOLLOW USER — INSTANT FEEDBACK
-  // -----------------------------
   const unfollowUser = async (userId: string) => {
     setLoadingId(userId);
 
-    // 🔥 Remove the user from UI instantly
+    // 🔥 Optimistic UI → remove immediately
+    const removedUser = list.find((u) => u.user.id === userId);
     setList((prev) => prev.filter((item) => item.user.id !== userId));
 
     try {
       const res = await fetch(`/api/followers?followingId=${userId}`, {
         method: "DELETE",
-        headers: getAuthHeader(),
+        credentials: "include",
       });
 
       if (!res.ok) {
         console.error("Unfollow failed", await res.json());
-
-        // ❗ Revert if backend fails
-        const originalUser = data.find((u) => u.user.id === userId);
-        if (originalUser) setList((prev) => [...prev, originalUser]);
+        // revert if failed
+        if (removedUser) setList((prev) => [...prev, removedUser]);
+      } else {
+        onFollowChange?.(); // 🔥 Notify parent
       }
     } catch (err) {
       console.error("Unfollow error:", err);
-
-      // ❗ Revert on network error
-      const originalUser = data.find((u) => u.user.id === userId);
-      if (originalUser) setList((prev) => [...prev, originalUser]);
+      if (removedUser) setList((prev) => [...prev, removedUser]);
     }
 
     setLoadingId(null);
   };
 
-
   return (
     <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
       <div className="bg-gray-300 rounded-xl max-w-md w-full max-h-[80vh] overflow-hidden shadow-lg border border-gray-400">
-
-        {/* HEADER */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h3 className="font-bold text-lg capitalize">{type}</h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition"
+            className="p-2 hover:bg-gray-100 rounded-full"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* LIST */}
         <div className="overflow-y-auto max-h-[calc(80vh-80px)] p-4">
           {list.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
@@ -132,7 +111,6 @@ export default function FollowersModal({
                     key={item.id}
                     className="flex items-center justify-between"
                   >
-                    {/* User Info */}
                     <div className="flex items-center gap-3">
                       <img
                         src={
@@ -153,44 +131,43 @@ export default function FollowersModal({
                       </div>
                     </div>
 
-                    {/* Follow / Unfollow Buttons */}
                     <div>
                       {type === "following" ? (
                         <button
                           disabled={isLoading}
                           onClick={() => unfollowUser(item.user.id)}
-                          className="px-3 py-1.5 text-sm font-medium rounded-full bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          className="px-3 py-1.5 text-sm font-medium rounded-full bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 flex items-center gap-2"
                         >
-                          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unfollow"}
+                          {isLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            "Unfollow"
+                          )}
+                        </button>
+                      ) : !item.isFollowing ? (
+                        <button
+                          disabled={isLoading}
+                          onClick={() => followUser(item.user.id)}
+                          className="px-3 py-1.5 text-sm font-medium rounded-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            "Follow Back"
+                          )}
                         </button>
                       ) : (
-                        <>
-                          {!item.isFollowing ? (
-                            <button
-                              disabled={isLoading}
-                              onClick={() => followUser(item.user.id)}
-                              className="px-3 py-1.5 text-sm font-medium rounded-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            >
-                              {isLoading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                "Follow Back"
-                              )}
-                            </button>
+                        <button
+                          disabled={isLoading}
+                          onClick={() => unfollowUser(item.user.id)}
+                          className="px-3 py-1.5 text-sm font-medium rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            <button
-                              disabled={isLoading}
-                              onClick={() => unfollowUser(item.user.id)}
-                              className="px-3 py-1.5 text-sm font-medium rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            >
-                              {isLoading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                "Unfollow"
-                              )}
-                            </button>
+                            "Unfollow"
                           )}
-                        </>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -199,7 +176,6 @@ export default function FollowersModal({
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

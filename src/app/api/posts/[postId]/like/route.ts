@@ -21,7 +21,7 @@ function verifyToken(token: string) {
 // POST /api/posts/[postId]/like - Like a post
 export async function POST(
   request: NextRequest,
-  { params }: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> }  // ✅ Changed to Promise
 ) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -42,7 +42,7 @@ export async function POST(
       );
     }
 
-    const postId = params.postId;
+    const { postId } = await params;  // ✅ Await params
 
     // Check if post exists
     const { data: post } = await supabase
@@ -110,7 +110,7 @@ export async function POST(
 // DELETE /api/posts/[postId]/like - Unlike a post
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> }  // ✅ Changed to Promise
 ) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -131,7 +131,7 @@ export async function DELETE(
       );
     }
 
-    const postId = params.postId;
+    const { postId } = await params;  // ✅ Await params
 
     // Delete like
     const { error } = await supabase

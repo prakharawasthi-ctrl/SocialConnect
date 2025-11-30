@@ -1,13 +1,14 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Heart, MessageCircle, Share2, UserPlus, MoreHorizontal, Trash2, Edit2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, UserPlus, MoreHorizontal, Trash2, Edit2, Shield } from 'lucide-react';
 import { Post } from '@/types';
 import CommentsModal from './CommentsModal';
 
 interface PostCardProps {
   post: Post;
   currentUserId?: string;
+  currentUserRole?: string; // ✅ Add role prop
   onLike: (postId: string) => void;
   onFollow: (userId: string) => void;
   onDelete?: (postId: string) => Promise<void>;
@@ -15,7 +16,16 @@ interface PostCardProps {
   onRefresh?: () => void;
 }
 
-export default function PostCard({ post, currentUserId, onLike, onFollow, onDelete, onUpdate, onRefresh }: PostCardProps) {
+export default function PostCard({
+  post,
+  currentUserId,
+  currentUserRole, // ✅ Destructure role
+  onLike,
+  onFollow,
+  onDelete,
+  onUpdate,
+  onRefresh
+}: PostCardProps) {
   const [imageError, setImageError] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -25,6 +35,9 @@ export default function PostCard({ post, currentUserId, onLike, onFollow, onDele
   const [showCommentsModal, setShowCommentsModal] = useState(false);
 
   const isOwnPost = post.user?.id === currentUserId;
+  const isAdmin = currentUserRole === 'admin'; // ✅ Check if user is admin
+  const canDelete = isOwnPost || isAdmin; // ✅ Admin can delete any post
+  const canEdit = isOwnPost; // Only owner can edit
 
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date();
@@ -69,8 +82,13 @@ export default function PostCard({ post, currentUserId, onLike, onFollow, onDele
       return;
     }
 
-    const confirmed = window.confirm('Are you sure you want to delete this post?');
-    
+    // ✅ Different confirmation message for admin
+    const confirmMessage = isAdmin && !isOwnPost
+      ? `⚠️ Admin Action: Are you sure you want to delete this post by @${post.user.username}? This action cannot be undone.`
+      : 'Are you sure you want to delete this post?';
+
+    const confirmed = window.confirm(confirmMessage);
+
     if (!confirmed) {
       console.log('❌ User cancelled deletion');
       return;
@@ -137,6 +155,16 @@ export default function PostCard({ post, currentUserId, onLike, onFollow, onDele
   return (
     <>
       <article className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
+        {/* ✅ Admin Badge - Show when admin is viewing someone else's post */}
+        {isAdmin && !isOwnPost && (
+          <div className="absolute top-2 left-2 z-10">
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full border border-purple-200">
+              <Shield className="w-3 h-3" />
+
+            </span>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
@@ -161,10 +189,10 @@ export default function PostCard({ post, currentUserId, onLike, onFollow, onDele
                 Follow
               </button>
             )}
-            
+
             {/* More Options Menu */}
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setShowMenu(!showMenu)}
                 className="p-2 hover:bg-gray-100 rounded-full transition"
                 disabled={isEditing}
@@ -175,30 +203,48 @@ export default function PostCard({ post, currentUserId, onLike, onFollow, onDele
               {/* Dropdown Menu */}
               {showMenu && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-10" 
+                  <div
+                    className="fixed inset-0 z-10"
                     onClick={() => setShowMenu(false)}
                   />
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
-                    {isOwnPost ? (
-                      <>
-                        <button
-                          onClick={handleEdit}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                          Edit Post
-                        </button>
-                        <button
-                          onClick={handleDelete}
-                          disabled={isDeleting}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          {isDeleting ? 'Deleting...' : 'Delete Post'}
-                        </button>
-                      </>
-                    ) : (
+                    {/* ✅ Show Edit only for own posts */}
+                    {canEdit && (
+                      <button
+                        onClick={handleEdit}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        Edit Post
+                      </button>
+                    )}
+
+                    {/* ✅ Show Delete for own posts OR admin */}
+                    {canDelete && (
+                      <button
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${isAdmin && !isOwnPost
+                            ? 'text-purple-600 hover:bg-purple-50'
+                            : 'text-red-600 hover:bg-red-50'
+                          }`}
+                      >
+                        {isAdmin && !isOwnPost ? (
+                          <>
+                            <Shield className="w-4 h-4" />
+                            {isDeleting ? 'Deleting...' : 'Delete (Admin)'}
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="w-4 h-4" />
+                            {isDeleting ? 'Deleting...' : 'Delete Post'}
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {/* ✅ Report option for non-owners and non-admins */}
+                    {!canDelete && !canEdit && (
                       <button
                         onClick={() => {
                           console.log('📢 Report post clicked (not implemented)');
@@ -288,7 +334,7 @@ export default function PostCard({ post, currentUserId, onLike, onFollow, onDele
         <div className="px-4 py-3 border-t border-gray-200">
           <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
             <span>{post.likes_count || 0} likes</span>
-            <button 
+            <button
               onClick={handleCommentClick}
               className="hover:underline cursor-pointer"
             >
@@ -300,17 +346,16 @@ export default function PostCard({ post, currentUserId, onLike, onFollow, onDele
             <button
               onClick={() => onLike(post.id)}
               disabled={isEditing}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition ${
-                post.is_liked_by_current_user
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition ${post.is_liked_by_current_user
                   ? 'text-red-500 bg-red-50'
                   : 'text-gray-600 hover:bg-gray-100'
-              } disabled:opacity-50`}
+                } disabled:opacity-50`}
             >
               <Heart className={`w-5 h-5 ${post.is_liked_by_current_user ? 'fill-current' : ''}`} />
               <span className="font-medium text-sm">Like</span>
             </button>
 
-            <button 
+            <button
               onClick={handleCommentClick}
               disabled={isEditing}
               className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition disabled:opacity-50"

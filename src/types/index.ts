@@ -1,10 +1,12 @@
+// src/types/index.ts
+
 // ============================================
 // USER TYPES
 // ============================================
 
 export interface User {
   id: string;
-  email: string;
+  email?: string;
   username: string;
   first_name: string;
   last_name: string;
@@ -12,19 +14,25 @@ export interface User {
   avatar_url?: string;
   website?: string;
   location?: string;
-  role: "user" | "admin";
-  is_active: boolean;
-  email_verified: boolean;
-  privacy_setting: "public" | "private" | "followers_only";
+  role?: "user" | "admin";
+  is_active?: boolean;
+  email_verified?: boolean;
+  privacy_setting?: "public" | "private" | "followers_only";
   last_login?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 
   // Computed fields
   followers_count?: number;
   following_count?: number;
   posts_count?: number;
   is_following?: boolean;
+}
+
+export interface CurrentUser extends User {
+  followers_count: number;
+  following_count: number;
+  posts_count: number;
 }
 
 // ============================================
@@ -35,7 +43,7 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   user: User;
-  error: string;
+  error?: string;
 }
 
 export interface RegisterData {
@@ -55,6 +63,19 @@ export interface LoginData {
 // POST TYPES
 // ============================================
 
+export interface Post {
+  id: string;
+  author_id: string;  // ✅ Added this field
+  content: string;
+  image_url?: string | null;
+  created_at: string;
+  updated_at?: string;
+  user: User;
+  likes_count: number;
+  comments_count: number;
+  is_liked_by_current_user: boolean;
+  is_following: boolean;
+}
 
 export interface CreatePostData {
   content: string;
@@ -87,6 +108,14 @@ export interface Follow {
   created_at: string;
 }
 
+export interface Follower {
+  id: string;
+  created_at: string;
+  user: User;
+  isFollowing?: boolean;
+  is_following?: boolean;
+}
+
 export interface FollowStats {
   followers_count: number;
   following_count: number;
@@ -103,6 +132,25 @@ export interface Like {
   user_id: string;
   post_id: string;
   created_at: string;
+}
+
+// ============================================
+// COMMENT TYPES
+// ============================================
+
+export interface Comment {
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  user?: User;
+}
+
+export interface CreateCommentData {
+  post_id: string;
+  content: string;
 }
 
 // ============================================
@@ -154,79 +202,4 @@ export interface PaginationParams {
   limit?: number;
   offset?: number;
   cursor?: string;
-}
-
-// ============================================
-// COMMENT TYPES (Optional)
-// ============================================
-
-export interface Comment {
-  id: string;
-  post_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-  user?: User;
-}
-
-export interface CreateCommentData {
-  post_id: string;
-  content: string;
-}
-
-// src/types/index.ts
-
-export interface User {
-  id: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  avatar_url?: string;
-  bio?: string;
-}
-
-export interface Follower {
-  id: string;
-  created_at: string;
-  user: User;
-  isFollowing: boolean;
-}
-
-export interface CurrentUser extends User {
-  followers_count: number;
-  following_count: number;
-  posts_count: number;
-}
-export interface User {
-  id: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  avatar_url?: string;
-  bio?: string;
-}
-
-export interface Post {
-  id: string;
-  content: string;
-  image_url?: string;
-  created_at: string;
-  user: User;
-  likes_count: number;
-  comments_count: number;
-  is_liked_by_current_user: boolean;
-  is_following: boolean;
-}
-
-export interface Follower {
-  id: string;
-  created_at: string;
-  user: User;
-}
-
-export interface CurrentUser extends User {
-  followers_count: number;
-  following_count: number;
-  posts_count: number;
 }

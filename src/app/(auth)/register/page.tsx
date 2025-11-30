@@ -22,6 +22,7 @@ const registerSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
+  role: z.enum(["user", "admin"]),
 })
 
 type RegisterFormData = z.infer<typeof registerSchema>
@@ -29,7 +30,7 @@ type RegisterFormData = z.infer<typeof registerSchema>
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const { register: registerUser } = useAuth()
-  
+
   const {
     register,
     handleSubmit,
@@ -73,7 +74,7 @@ export default function RegisterPage() {
                   <p className="text-sm text-red-600">{errors.first_name.message}</p>
                 )}
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="last_name">Last Name</Label>
                 <Input
@@ -128,6 +129,24 @@ export default function RegisterPage() {
                 <p className="text-sm text-red-600">{errors.password.message}</p>
               )}
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <select
+                id="role"
+                className="border border-gray-300 rounded-md p-2 w-full bg-white"
+                {...register("role")}
+                disabled={isLoading}
+              >
+                <option value="">Select Role</option>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+
+              {errors.role && (
+                <p className="text-sm text-red-600">{errors.role.message}</p>
+              )}
+            </div>
+
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (

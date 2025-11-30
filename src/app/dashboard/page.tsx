@@ -1,5 +1,4 @@
 
-
 // 'use client'
 
 // import React, { useEffect, useState } from 'react';
@@ -45,7 +44,7 @@
 //     }
 //   }, [authLoading, isAuthenticated, router]);
 
-//   // Fetch data when authenticated - THIS RUNS ON EVERY PAGE LOAD/REFRESH
+//   // Fetch data when authenticated
 //   useEffect(() => {
 //     console.log('🔄 Main data fetch effect triggered');
 //     console.log('  - authUser:', !!authUser);
@@ -54,7 +53,6 @@
 //     if (authUser && isAuthenticated) {
 //       console.log('✅ User is authenticated, fetching all data...');
       
-//       // Fetch all data
 //       const fetchAllData = async () => {
 //         await Promise.all([
 //           fetchUserProfile(),
@@ -67,7 +65,7 @@
       
 //       fetchAllData();
 //     }
-//   }, [authUser, isAuthenticated]); // This dependency array ensures it runs on auth changes
+//   }, [authUser, isAuthenticated]);
 
 //   const getAuthHeader = () => {
 //     const token = localStorage.getItem('accessToken');
@@ -91,7 +89,6 @@
 //     console.log('👤 Fetching user profile from database...');
     
 //     try {
-//       // Fetch the complete user profile from the database
 //       const response = await fetch(`/api/users/${authUser.id}`, {
 //         headers: getAuthHeader()
 //       });
@@ -101,13 +98,12 @@
 //         console.log('✅ User profile fetched from DB:', data.user);
 //         setCurrentUser({
 //           ...authUser,
-//           ...data.user, // This will include bio, avatar_url, etc.
+//           ...data.user,
 //           followers_count: data.user.followers_count || 0,
 //           following_count: data.user.following_count || 0,
 //           posts_count: data.user.posts_count || 0
 //         });
 //       } else {
-//         // Fallback to authUser if API fails
 //         console.log('⚠️ Failed to fetch from DB, using authUser');
 //         setCurrentUser({
 //           ...authUser,
@@ -118,7 +114,6 @@
 //       }
 //     } catch (error) {
 //       console.error('❌ Error fetching user profile:', error);
-//       // Fallback to authUser
 //       setCurrentUser({
 //         ...authUser,
 //         followers_count: 0,
@@ -137,7 +132,6 @@
 //     setPostsLoading(true);
     
 //     try {
-//       // Always fetch all posts from API
 //       const url = '/api/posts?feedType=all';
 //       console.log('📡 Fetching from:', url);
       
@@ -152,15 +146,12 @@
 //         console.log('✅ Posts fetched successfully:');
 //         console.log('  - Total posts:', data.posts.length);
         
-//         // Filter posts client-side based on isShowingUserPosts
 //         let filteredPosts = data.posts;
         
 //         if (isShowingUserPosts && authUser) {
-//           // Show only current user's posts
 //           filteredPosts = data.posts.filter((post: Post) => post.user.id === authUser.id);
 //           console.log('  - Filtered to user posts only:', filteredPosts.length);
 //         } else if (!isShowingUserPosts && authUser) {
-//           // Show all posts EXCEPT current user's posts
 //           filteredPosts = data.posts.filter((post: Post) => post.user.id !== authUser.id);
 //           console.log('  - Filtered to others posts only:', filteredPosts.length);
 //         }
@@ -296,17 +287,18 @@
 //     }
 //   };
 
+//   // ✅ Enhanced delete handler with admin support
 //   const handleDeletePost = async (postId: string) => {
 //     console.log('🗑️ handleDeletePost called');
 //     console.log('  - Post ID:', postId);
 //     console.log('  - Auth user:', authUser?.id);
+//     console.log('  - User role:', currentUser?.role);
 
 //     try {
 //       const url = `/api/posts/${postId}`;
 //       console.log('📡 Sending DELETE request to:', url);
       
 //       const headers = getAuthHeader();
-//       console.log('🔑 Request headers:', headers);
 
 //       const response = await fetch(url, {
 //         method: 'DELETE',
@@ -314,7 +306,6 @@
 //       });
 
 //       console.log('📡 Response status:', response.status);
-//       console.log('📡 Response ok:', response.ok);
 
 //       const responseData = await response.json();
 //       console.log('📡 Response data:', responseData);
@@ -327,7 +318,6 @@
 //       console.log('✅ Post deleted from server successfully');
 
 //       // Remove post from local state
-//       console.log('🔄 Updating local state...');
 //       setPosts(prev => {
 //         const newPosts = prev.filter(p => p.id !== postId);
 //         console.log('  - Posts before:', prev.length);
@@ -335,17 +325,60 @@
 //         return newPosts;
 //       });
 
-//       // Update posts count
-//       setCurrentUser(prev => prev 
-//         ? { ...prev, posts_count: Math.max(0, prev.posts_count - 1) }
-//         : prev
-//       );
+//       // Update posts count only if it's the current user's post
+//       const deletedPost = posts.find(p => p.id === postId);
+//       if (deletedPost?.user.id === authUser?.id) {
+//         setCurrentUser(prev => prev 
+//           ? { ...prev, posts_count: Math.max(0, prev.posts_count - 1) }
+//           : prev
+//         );
+//       }
 
 //       console.log('✅✅ Post successfully removed from feed ✅✅');
 
 //     } catch (error) {
 //       console.error('🔥 Error in handleDeletePost:', error);
-//       throw error; // Re-throw so PostCard can show error
+//       throw error;
+//     }
+//   };
+
+//   // ✅ Add update handler for editing posts
+//   const handleUpdatePost = async (postId: string, content: string) => {
+//     console.log('✏️ handleUpdatePost called');
+//     console.log('  - Post ID:', postId);
+//     console.log('  - New content:', content);
+
+//     try {
+//       const url = `/api/posts/${postId}`;
+//       console.log('📡 Sending PUT request to:', url);
+
+//       const response = await fetch(url, {
+//         method: 'PUT',
+//         headers: getAuthHeader(),
+//         body: JSON.stringify({ content })
+//       });
+
+//       console.log('📡 Response status:', response.status);
+
+//       if (!response.ok) {
+//         const errorData = await response.json();
+//         console.error('❌ Update request failed:', errorData);
+//         throw new Error(errorData.error || 'Failed to update post');
+//       }
+
+//       const responseData = await response.json();
+//       console.log('✅ Post updated successfully:', responseData.data);
+
+//       // Update post in local state
+//       setPosts(prev => prev.map(p => 
+//         p.id === postId ? { ...p, content: responseData.data.content } : p
+//       ));
+
+//       console.log('✅ Post updated in feed');
+
+//     } catch (error) {
+//       console.error('🔥 Error in handleUpdatePost:', error);
+//       throw error;
 //     }
 //   };
 
@@ -376,9 +409,6 @@
 
 //     try {
 //       console.log('🚀 Creating post...');
-//       console.log('  - Content length:', postContent.length);
-//       console.log('  - Has image:', !!postImage);
-//       console.log('  - Image size:', postImage?.length || 0);
 
 //       const response = await fetch('/api/posts', {
 //         method: 'POST',
@@ -389,8 +419,6 @@
 //         })
 //       });
 
-//       console.log('📡 Create post response status:', response.status);
-
 //       if (!response.ok) {
 //         const errorData = await response.json();
 //         console.error('❌ Failed to create post:', errorData);
@@ -400,27 +428,19 @@
 
 //       const data = await response.json();
 //       console.log('✅ Post created successfully:', data.post);
-//       console.log('  - Post ID:', data.post.id);
-//       console.log('  - Image URL:', data.post.image_url);
 
-//       // Add new post to the feed if it should be visible
 //       if (!isShowingUserPosts || data.post.user.id === authUser?.id) {
 //         setPosts([data.post, ...posts]);
-//         console.log('✅ Post added to feed');
 //       }
 
-//       // Update posts count
 //       setCurrentUser(prev => prev 
 //         ? { ...prev, posts_count: prev.posts_count + 1 }
 //         : prev
 //       );
 
-//       // Clear form
 //       setPostContent('');
 //       setPostImage(null);
 //       setShowCreatePost(false);
-
-//       console.log('✅ Form cleared and modal closed');
 
 //     } catch (error) {
 //       console.error('🔥 Error creating post:', error);
@@ -436,11 +456,9 @@
 
 //   const handleTogglePosts = () => {
 //     console.log('🔄 Toggling posts view');
-//     console.log('  - Current state:', isShowingUserPosts);
 //     setIsShowingUserPosts(prev => !prev);
 //   };
 
-//   // Refetch posts when toggling between all/user posts
 //   useEffect(() => {
 //     if (authUser && isAuthenticated) {
 //       console.log('🔄 Posts filter changed, refetching...');
@@ -483,7 +501,6 @@
 //           />
 
 //           <main className="lg:col-span-6">
-//             {/* Show message when viewing only user posts */}
 //             {isShowingUserPosts && (
 //               <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
 //                 <div className="flex items-center gap-2">
@@ -510,10 +527,12 @@
 //               posts={posts}
 //               loading={postsLoading}
 //               currentUserId={authUser?.id}
+//               currentUserRole={currentUser?.role}
 //               onLike={handleLike}
 //               onFollow={handleFollow}
 //               onRefresh={fetchPosts}
 //               onDelete={handleDeletePost}
+//               onUpdate={handleUpdatePost}
 //             />
 //           </main>
 
@@ -552,7 +571,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, LogOut } from 'lucide-react';
 import { Post, User, Follower, CurrentUser } from '@/types';
 
 // Components
@@ -835,7 +854,6 @@ export default function DashboardWithAPIs() {
     }
   };
 
-  // ✅ Enhanced delete handler with admin support
   const handleDeletePost = async (postId: string) => {
     console.log('🗑️ handleDeletePost called');
     console.log('  - Post ID:', postId);
@@ -865,7 +883,6 @@ export default function DashboardWithAPIs() {
 
       console.log('✅ Post deleted from server successfully');
 
-      // Remove post from local state
       setPosts(prev => {
         const newPosts = prev.filter(p => p.id !== postId);
         console.log('  - Posts before:', prev.length);
@@ -873,7 +890,6 @@ export default function DashboardWithAPIs() {
         return newPosts;
       });
 
-      // Update posts count only if it's the current user's post
       const deletedPost = posts.find(p => p.id === postId);
       if (deletedPost?.user.id === authUser?.id) {
         setCurrentUser(prev => prev 
@@ -890,7 +906,6 @@ export default function DashboardWithAPIs() {
     }
   };
 
-  // ✅ Add update handler for editing posts
   const handleUpdatePost = async (postId: string, content: string) => {
     console.log('✏️ handleUpdatePost called');
     console.log('  - Post ID:', postId);
@@ -917,7 +932,6 @@ export default function DashboardWithAPIs() {
       const responseData = await response.json();
       console.log('✅ Post updated successfully:', responseData.data);
 
-      // Update post in local state
       setPosts(prev => prev.map(p => 
         p.id === postId ? { ...p, content: responseData.data.content } : p
       ));
@@ -1007,6 +1021,20 @@ export default function DashboardWithAPIs() {
     setIsShowingUserPosts(prev => !prev);
   };
 
+  // ✅ NEW: Logout handler
+  const handleLogout = () => {
+    console.log('🚪 Logging out...');
+    
+    // Clear tokens from localStorage
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    
+    console.log('✅ Tokens cleared');
+    
+    // Redirect to login page
+    router.push('/login');
+  };
+
   useEffect(() => {
     if (authUser && isAuthenticated) {
       console.log('🔄 Posts filter changed, refetching...');
@@ -1029,7 +1057,7 @@ export default function DashboardWithAPIs() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar currentUser={currentUser} />
+      <Navbar currentUser={currentUser} onLogout={handleLogout} />
 
       <div className="max-w-6xl mx-auto pt-20 px-4 pb-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

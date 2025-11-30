@@ -414,3 +414,30 @@ export interface PaginationParams {
   offset?: number;
   cursor?: string;
 }
+
+
+// ============================================
+// NOTIFICATION TYPES
+// ============================================
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  related_user_id: string | null;
+  related_post_id: string | null;
+  type: 'follow' | 'like' | 'comment';
+  message: string;
+  is_read: boolean;
+  created_at: string;
+  related_user?: Pick<User, 'id' | 'username' | 'avatar_url' | 'first_name' | 'last_name'>;
+  related_post?: {
+    id: string;
+    content: string | null;
+    image_url: string | null;
+  };
+}
+
+export interface NotificationStats {
+  unread_count: number;
+  total_count: number;
+}
